@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Historique — DataClean API{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="dot accent3"></span>
+      <span class="panel-title">Historique des traitements</span>
+    </div>
+    <div class="panel-body">
+      <table class="htable full">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Fichier</th>
+            <th>Lignes init.</th>
+            <th>Lignes finales</th>
+            <th>Doublons</th>
+            <th>Manquantes</th>
+            <th>Outliers</th>
+            <th>Score</th>
+            <th>Date</th>
+            <th>Export</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in history %}
+          <tr>
+            <td style="color:var(--muted)">{{ h.id }}</td>
+            <td>{{ h.file_name }}</td>
+            <td>{{ h.original_rows }}</td>
+            <td>{{ h.cleaned_rows }}</td>
+            <td>{{ h.duplicates_removed }}</td>
+            <td>{{ h.missing_treated }}</td>
+            <td>{{ h.outliers_treated }}</td>
+            <td style="color:{% if h.quality_score >= 80 %}#10b981{% elif h.quality_score >= 60 %}#f59e0b{% else %}#ef4444{% endif %}; font-weight:700;">
+              {{ h.quality_score }}%
+            </td>
+            <td style="color:var(--muted)">{{ h.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>
+              <button class="exp-btn" onclick="downloadExport({{ h.id }}, 'csv')">CSV</button>
+              <button class="exp-btn" onclick="downloadExport({{ h.id }}, 'xlsx')">XLSX</button>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px;">Aucun traitement effectué.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function downloadExport(histId, fmt) {
+  window.location.href = `/api/export/${histId}/${fmt}`;
+}
+</script>
+{% endblock %}

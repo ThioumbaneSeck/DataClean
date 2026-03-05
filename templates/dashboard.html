@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — DataClean API{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+
+  <!-- Stats rapides -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-val">{{ current_user.total_cleanings }}</span>
+      <span class="stat-lbl">Nettoyages</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-val">{{ current_user.total_rows_cleaned }}</span>
+      <span class="stat-lbl">Lignes traitées</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-val" id="scoreDisplay">—</span>
+      <span class="stat-lbl">Score qualité</span>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+
+    <!-- Panel gauche : options uniquement -->
+    <div class="left-col">
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="dot accent2"></span>
+          <span class="panel-title">Options de nettoyage</span>
+        </div>
+        <div class="panel-body">
+          <div class="opt-list">
+
+            <div class="opt-row active" id="opt-dup" data-key="dup">
+              <div class="opt-left">
+                <span>🔁</span>
+                <div>
+                  <div class="opt-name">Doublons</div>
+                  <div class="opt-desc">Suppression automatique</div>
+                </div>
+              </div>
+              <div class="toggle on" id="tog-dup"></div>
+            </div>
+
+            <div class="opt-row active" id="opt-miss" data-key="miss">
+              <div class="opt-left">
+                <span>🕳️</span>
+                <div>
+                  <div class="opt-name">Valeurs manquantes</div>
+                  <div class="opt-desc">Imputation configurable</div>
+                </div>
+              </div>
+              <div class="toggle on" id="tog-miss"></div>
+            </div>
+            <div class="sub-opt show" id="sub-miss">
+              <label>Méthode</label>
+              <select id="missingMethod">
+                <option value="mean">Moyenne</option>
+                <option value="median">Médiane</option>
+                <option value="mode">Mode</option>
+                <option value="drop">Supprimer lignes</option>
+              </select>
+            </div>
+
+            <div class="opt-row active" id="opt-out" data-key="out">
+              <div class="opt-left">
+                <span>⚡</span>
+                <div>
+                  <div class="opt-name">Valeurs aberrantes</div>
+                  <div class="opt-desc">Détection statistique</div>
+                </div>
+              </div>
+              <div class="toggle on" id="tog-out"></div>
+            </div>
+            <div class="sub-opt show" id="sub-out">
+              <label>Méthode</label>
+              <select id="outlierMethod">
+                <option value="iqr">IQR (Interquartile Range)</option>
+                <option value="zscore">Z-score (±3σ)</option>
+              </select>
+            </div>
+
+            <div class="opt-row active" id="opt-norm" data-key="norm">
+              <div class="opt-left">
+                <span>📐</span>
+                <div>
+                  <div class="opt-name">Normalisation</div>
+                  <div class="opt-desc">Mise à l'échelle</div>
+                </div>
+              </div>
+              <div class="toggle on" id="tog-norm"></div>
+            </div>
+            <div class="sub-opt show" id="sub-norm">
+              <label>Méthode</label>
+              <select id="normMethod">
+                <option value="minmax">Min-Max [0, 1]</option>
+                <option value="standard">Standardisation (Z)</option>
+              </select>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Bouton désactivé tant qu'aucun fichier analysé -->
+      <button class="run-btn" id="runBtn" disabled>▶ LANCER LE TRAITEMENT</button>
+
+    </div>
+
+    <!-- Panel droit : upload + analyse + résultats -->
+    <div class="right-col">
+
+      <!-- Upload -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="dot"></span>
+          <span class="panel-title">Source de données</span>
+        </div>
+        <div class="panel-body">
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.json,.xml">
+            <span class="upload-icon" id="uploadIcon">📂</span>
+            <span class="upload-label" id="uploadLabel">Déposer un fichier</span>
+            <span class="upload-sub" id="uploadSub">CSV · Excel · JSON · XML</span>
+          </div>
+          <div id="fileAlert" class="alert-info" style="display:none; margin-top:10px;"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════════════
+           ANALYSE PRÉ-TRAITEMENT
+           ══════════════════════════════════════════════════════════════════ -->
+      <div class="panel" id="analyzePanel" style="display:none;">
+        <div class="panel-header" style="justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="dot accent2"></span>
+            <span class="panel-title" id="analyzePanelTitle">Analyse du fichier</span>
+          </div>
+          <span id="analyzeSpinner" style="display:none;font-size:13px;color:var(--muted);">⏳ Analyse en cours…</span>
+        </div>
+        <div class="panel-body" id="analyzeBody">
+
+          <div class="tabs" id="analyzeTabs">
+            <div class="tab active" data-atab="overview">Vue d'ensemble</div>
+            <div class="tab" data-atab="missing">Valeurs manquantes</div>
+            <div class="tab" data-atab="outliers">Outliers</div>
+              <div class="atab-body" id="atab-outliers" style="display:none;">
+                <div id="analyzeOutliers"></div>
+              </div>
+            <div class="tab" data-atab="preview">Aperçu</div>
+          </div>
+
+          <div class="atab-body" id="atab-overview">
+            <div class="analyze-cards" id="analyzeCards"></div>
+            <div id="analyzeColTypes" style="margin-top:14px;"></div>
+          </div>
+
+          <div class="atab-body" id="atab-missing" style="display:none;">
+            <div id="analyzeMissing"></div>
+          </div>
+
+          <div class="atab-body" id="atab-stats" style="display:none;">
+            <div class="table-scroll" id="analyzeStats"></div>
+          </div>
+
+          <div class="atab-body" id="atab-preview" style="display:none;">
+            <div class="table-scroll" id="analyzePreview"></div>
+          </div>
+
+        </div>
+      </div>
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+
+      <!-- Progression -->
+      <div class="panel" id="progressPanel" style="display:none;">
+        <div class="panel-header">
+          <span class="dot warn"></span>
+          <span class="panel-title">Pipeline de traitement</span>
+        </div>
+        <div class="panel-body">
+          <div class="prog-label"><span id="progStep">Initialisation...</span><span id="progPct">0%</span></div>
+          <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+          <div class="prog-chips">
+            <span class="chip" id="chip-upload">① Upload</span>
+            <span class="chip" id="chip-dup">② Doublons</span>
+            <span class="chip" id="chip-miss">③ Manquantes</span>
+            <span class="chip" id="chip-out">④ Outliers</span>
+            <span class="chip" id="chip-norm">⑤ Normalisation</span>
+            <span class="chip" id="chip-score">⑥ Score qualité</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Résultats stats -->
+      <div id="statsGrid" class="stats-grid" style="display:none;">
+        <div class="scard rows"><div class="sc-lbl">Lignes traitées</div><div class="sc-val" id="svRows">—</div><div class="sc-delta" id="sdRows"></div></div>
+        <div class="scard miss"><div class="sc-lbl">Val. manquantes</div><div class="sc-val" id="svMiss">—</div><div class="sc-delta" id="sdMiss"></div></div>
+        <div class="scard out"><div class="sc-lbl">Outliers traités</div><div class="sc-val" id="svOut">—</div><div class="sc-delta" id="sdOut"></div></div>
+        <div class="scard score"><div class="sc-lbl">Score qualité</div><div class="sc-val" id="svScore">—</div><div class="sc-delta" id="sdScore"></div></div>
+      </div>
+
+      <!-- Graphiques -->
+      <div id="chartsSection" style="display:none;">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="dot accent2"></span>
+            <span class="panel-title">Analyse visuelle</span>
+          </div>
+          <div class="panel-body">
+            <div class="charts-grid">
+              <div class="chart-wrap">
+                <div class="chart-title">Résumé du nettoyage</div>
+                <canvas id="chartCleaning"></canvas>
+              </div>
+              <div class="chart-wrap">
+                <div class="chart-title">Score de qualité</div>
+                <canvas id="chartQuality"></canvas>
+              </div>
+              <div class="chart-wrap">
+                <div class="chart-title">Évolution lignes</div>
+                <canvas id="chartRows"></canvas>
+              </div>
+              <div class="chart-wrap">
+                <div class="chart-title">Historique scores</div>
+                <canvas id="chartHistory"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs résultats post-nettoyage -->
+      <div class="panel" id="resultTabs" style="display:none;">
+        <div class="tabs">
+          <div class="tab active" data-tab="preview">Aperçu nettoyé</div>
+          <div class="tab" data-tab="export">Export</div>
+          <div class="tab" data-tab="history">Historique</div>
+        </div>
+        <div class="tab-body" id="tab-preview">
+          <div id="previewAlert" class="alert-info" style="margin-bottom:12px;"></div>
+          <div class="table-scroll" id="previewTable"></div>
+        </div>
+        <div class="tab-body" id="tab-export" style="display:none;">
+          <p class="text-muted" style="margin-bottom:14px;">Télécharger les données nettoyées :</p>
+          <div class="export-row" id="exportRow"></div>
+        </div>
+        <div class="tab-body" id="tab-history" style="display:none;">
+          <table class="htable">
+            <thead><tr><th>Fichier</th><th>Lignes</th><th>Score</th><th>Date</th><th>Export</th></tr></thead>
+            <tbody id="histBody">
+              {% for h in recent %}
+              <tr>
+                <td>{{ h.file_name }}</td>
+                <td>{{ h.cleaned_rows }}</td>
+                <td style="color:{% if h.quality_score >= 80 %}#10b981{% elif h.quality_score >= 60 %}#f59e0b{% else %}#ef4444{% endif %}">{{ h.quality_score }}%</td>
+                <td>{{ h.created_at.strftime('%d/%m %H:%M') }}</td>
+                <td><button class="exp-btn" onclick="downloadExport({{ h.id }}, 'csv')">CSV</button></td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" style="color:var(--muted);text-align:center;">Aucun historique</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

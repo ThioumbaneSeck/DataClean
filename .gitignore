@@ -1,0 +1,14 @@
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+database/app.db
+uploads/
+processed/
+reports_out/
+static/plots/
+*.egg-info/
+dist/
+build/
+.DS_Store

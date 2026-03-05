@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Profil — DataClean API{% endblock %}
+
+{% block content %}
+<div class="page-wrap" style="max-width:600px;">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="dot"></span>
+      <span class="panel-title">Mon profil</span>
+    </div>
+    <div class="panel-body" style="text-align:center; padding:32px;">
+      {% if current_user.picture %}
+        <img src="{{ current_user.picture }}" alt="Photo de profil"
+             style="width:80px;height:80px;border-radius:50%;border:2px solid var(--accent);margin-bottom:16px;">
+      {% endif %}
+      <h2 style="margin-bottom:4px;">{{ current_user.name }}</h2>
+      <p style="color:var(--muted);">{{ current_user.email }}</p>
+      <div class="stats-bar" style="margin-top:24px;">
+        <div class="stat-item">
+          <span class="stat-val">{{ current_user.total_cleanings }}</span>
+          <span class="stat-lbl">Nettoyages</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">{{ current_user.total_rows_cleaned }}</span>
+          <span class="stat-lbl">Lignes traitées</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">{{ history_count }}</span>
+          <span class="stat-lbl">Fichiers</span>
+        </div>
+      </div>
+      <p style="margin-top:20px; color:var(--muted); font-size:12px;">
+        Connecté via Google OAuth · Membre depuis {{ current_user.created_at.strftime('%d/%m/%Y') }}
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
