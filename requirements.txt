@@ -9,3 +9,6 @@ openpyxl
 python-dotenv
 gunicorn
 lxml
+reportlab
+xlsxwriter
+scikit-learn
